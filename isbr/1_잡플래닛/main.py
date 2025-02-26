@@ -47,7 +47,7 @@ if command == 'quit':
     driver.quit()
     exit()
 
-target_url = "https://www.jobplanet.co.kr/companies/87779/interviews/%EB%8C%80%EA%B5%AC%EA%B5%90%ED%86%B5%EA%B3%B5%EC%82%AC"
+target_url = "https://www.jobplanet.co.kr/companies/88986/interviews/%ED%95%9C%EA%B5%AD%EB%B3%B4%EA%B1%B4%EC%82%B0%EC%97%85%EC%A7%84%ED%9D%A5%EC%9B%90"
 
 # 페이지 파싱 시작
 page = 1
@@ -70,7 +70,7 @@ while True:
     page += 1
 
 # 엑셀로 저장
-output_file = 'output_data.xlsx'
+output_file = '한국보건산업진흥원_리뷰.xlsx'
 columns = ["번호", "인터뷰 내용", "면접 질문", "면접 답변", "채용 방식", "발표 시기", "면접 결과", "면접 경험"]
 output_df = pd.DataFrame(parsed_data, columns=columns)
 output_df.to_excel(output_file, index=False)
