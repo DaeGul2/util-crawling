@@ -85,8 +85,12 @@ def click_target_link():
             print(f"\n🔍 [{i+1}번째 행] 데이터 추출 중...")
             wait_for_next()
             
-            business_number = row.find_element(By.XPATH, "./td[2]/a")
-            business_number.click()
+            try:
+                business_number = row.find_element(By.XPATH, ".//td[2]/a")
+                business_number.click()
+            except Exception as e:
+                print(f"Error clicking on business number link: {str(e)}")
+
             print("✅ 사업자등록번호 클릭 완료!")
             time.sleep(2)
             
