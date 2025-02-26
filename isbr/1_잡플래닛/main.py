@@ -47,10 +47,12 @@ if command == 'quit':
     driver.quit()
     exit()
 
+target_url = "https://www.jobplanet.co.kr/companies/87779/interviews/%EB%8C%80%EA%B5%AC%EA%B5%90%ED%86%B5%EA%B3%B5%EC%82%AC"
+
 # 페이지 파싱 시작
 page = 1
 while True:
-    url = f"https://www.jobplanet.co.kr/companies/87779/interviews/%EB%8C%80%EA%B5%AC%EA%B5%90%ED%86%B5%EA%B3%B5%EC%82%ACpage?={page}"
+    url = f"{target_url}?page={page}"
     driver.get(url)
     time.sleep(2)  # 페이지 로드 대기
 
