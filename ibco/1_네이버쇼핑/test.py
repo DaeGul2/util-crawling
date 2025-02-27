@@ -15,7 +15,7 @@ options.add_argument("--start-maximized")  # 창 최대화
 driver = webdriver.Chrome(service=service, options=options)
 
 # ✅ 크롤링할 네이버 브랜드 스토어 상품 리뷰 페이지
-url = "https://brand.naver.com/sanmoae/products/5592524686#REVIEW"
+url = "https://brand.naver.com/tagababy/products/8560438996?n_media=11068&n_query=%EC%9C%A0%EC%95%84%ED%81%AC%EB%A6%BC&n_rank=5&n_ad_group=grp-a001-02-000000043422054&n_ad=nad-a001-02-000000310127046&n_campaign_type=2&n_mall_id=ncp_1npxrr_01&n_mall_pid=8560438996&n_ad_group_type=2&n_match=3&NaPm=ct%3Dm7n2vozm%7Cci%3DER35d53270%2Df4e4%2D11ef%2D8672%2Df0b2b9003b74%7Ctr%3Dpla%7Chk%3D6e57b6fde87c8d41a121774c4c3c594b3a201b53%7Cnacn%3D8yv2BQQja9Fe"
 driver.get(url)
 
 # ✅ 웹페이지가 완전히 로드되도록 대기
