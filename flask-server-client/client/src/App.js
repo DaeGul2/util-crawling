@@ -1,12 +1,19 @@
 import React from "react";
-import CrawlButton from "./components/CrawlButton";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import JobPlanetCrawling from "./components/JobPlanetCrawling";
+import NaverShoppingCrawling from "./components/NaverShoppingCrawling";
 
 function App() {
     return (
-        <div>
-            <h1>크롤링 시스템</h1>
-            <CrawlButton />
-        </div>
+        <Router>
+            <Navbar />
+            <Routes>
+                <Route path="/" element={<h1>🏠 홈페이지</h1>} />
+                <Route path="/jobplanet" element={<JobPlanetCrawling />} />
+                <Route path="/naver-shopping" element={<NaverShoppingCrawling />} />
+            </Routes>
+        </Router>
     );
 }
 
