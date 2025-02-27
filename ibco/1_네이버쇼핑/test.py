@@ -5,6 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import pandas as pd
+import re
 
 # 크롬드라이버 실행 경로 설정
 driver_path = "C:/chromedriver-win64/chromedriver.exe"
@@ -34,11 +35,9 @@ while current_page <= MAX_PAGES:
     print(f"🔍 {current_page} 페이지 크롤링 중...")
 
     try:
-        # 리뷰 리스트 가져오기 (XPath 활용)
+        # 리뷰 리스트 가져오기 (li 태그 기준으로 전체 요소 가져오기)
         review_elements = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located(
-                (By.XPATH, "//div[contains(@class, 'review') or contains(@class, '_9oeeh3ukt7')]")
-            )
+            EC.presence_of_all_elements_located((By.XPATH, "//li[contains(@class, 'BnwL_cs1av')]"))
         )
     except:
         print("🚫 리뷰 로딩 실패")
@@ -50,17 +49,13 @@ while current_page <= MAX_PAGES:
             date = review.find_element(By.XPATH, ".//span[contains(@class, '_2L3vDiadT9')]").text
             rating = review.find_element(By.XPATH, ".//em[contains(@class, '_15NU42F3kT')]").text
             
-            # ✅ 리뷰 텍스트 크롤링 (리뷰 본문에 해당하는 부분 찾기)
-            content_elements = review.find_elements(By.XPATH, ".//span[contains(@class, '_2L3vDiadT9')]")
-            content = ""
-            for element in content_elements:
-                text = element.text.strip()
-                if text and "신고" not in text:  # 신고 버튼 같은 불필요한 텍스트 필터링
-                    content = text
-                    break
+            # ✅ 리뷰 텍스트 전체 가져오기
+            raw_html = review.get_attribute('innerHTML')  # 리뷰 태그의 HTML 전체 가져오기
+            review_texts = re.findall(r'<span[^>]*>(.*?)</span>', raw_html, re.DOTALL)  # <span> 안에 있는 텍스트 추출
+            review_content = " ".join([text.strip() for text in review_texts if text.strip() and "신고" not in text])
 
-            reviews.append([username, date, rating, content])
-            print(f"✅ {username} | {date} | 평점: {rating}\n{content}\n\n" + "-" * 60)
+            reviews.append([username, date, rating, review_content])
+            print(f"✅ {username} | {date} | 평점: {rating}\n{review_content}\n\n" + "-" * 60)
         except Exception as e:
             print(f"❌ 리뷰 추출 오류: {e}")
 
@@ -88,7 +83,11 @@ while current_page <= MAX_PAGES:
 # ✅ 크롤링 완료 후 WebDriver 종료
 driver.quit()
 
-# ✅ 데이터 CSV 파일 저장
+# ✅ 데이터 Excel 파일 저장
 df = pd.DataFrame(reviews, columns=["작성자", "날짜", "평점", "리뷰"])
-df.to_csv("naver_reviews.csv", index=False, encoding="utf-8-sig")
-print("✅ 크롤링 완료! 데이터 저장됨: `naver_reviews.csv`")
+excel_filename = "naver_reviews.xlsx"
+
+# `encoding="utf-8-sig"` 제거 → XlsxWriter 엔진 사용하여 저장
+df.to_excel(excel_filename, index=False, engine="xlsxwriter")
+
+print(f"✅ 크롤링 완료! 데이터 저장됨: `{excel_filename}`")
