@@ -5,6 +5,7 @@ const CrawlButton = () => {
     const [url, setUrl] = useState("");
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
+    const [downloadUrl, setDownloadUrl] = useState(null);  // 🔹 다운로드 링크 상태 추가
 
     // 1️⃣ 브라우저 실행 (로그인용)
     const openBrowser = async () => {
@@ -26,12 +27,14 @@ const CrawlButton = () => {
 
         setLoading(true);
         setMessage("");
+        setDownloadUrl(null);  // 🔹 다운로드 URL 초기화
 
         try {
             const response = await axios.post("http://localhost:5000/crawl", {
                 target_url: url
             });
             setMessage(response.data.message);
+            setDownloadUrl(response.data.download_url);  // 🔹 다운로드 URL 저장
         } catch (error) {
             console.error("크롤링 실패", error);
             setMessage("크롤링 중 오류 발생");
@@ -55,6 +58,14 @@ const CrawlButton = () => {
             <button onClick={startCrawling} disabled={loading}>
                 {loading ? "크롤링 중..." : "크롤링 시작"}
             </button>
+            {downloadUrl && (
+                <div>
+                    <p>✅ 크롤링 완료!</p>
+                    <a href={downloadUrl} download>
+                        <button>📥 결과 다운로드</button>
+                    </a>
+                </div>
+            )}
             <p>{message}</p>
         </div>
     );

@@ -1,7 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import time
 import pandas as pd
+import os
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
@@ -58,15 +59,25 @@ def crawl():
         print(f"Page {page} parsed and added to data.")
         page += 1
 
-   # 엑셀로 저장
-    output_file = 'interviews.xlsx'
+    # 엑셀로 저장
+    output_file = "interviews.xlsx"
     columns = ["번호", "인터뷰 내용", "면접 질문", "면접 답변", "채용 방식", "발표 시기"]  # 6개로 수정
 
     output_df = pd.DataFrame(parsed_data, columns=columns)
     output_df.to_excel(output_file, index=False)
     print(f"Data saved to {output_file}")
 
-    return jsonify({"message": "크롤링 완료", "file": output_file})
+    # ✅ 파일 다운로드 URL을 클라이언트에 반환
+    return jsonify({"message": "크롤링 완료", "download_url": f"http://localhost:5000/download/{output_file}"})
+
+@app.route('/download/<filename>', methods=['GET'])
+def download_file(filename):
+    """ 클라이언트에서 파일을 다운로드할 수 있도록 제공 """
+    file_path = os.path.join(os.getcwd(), filename)
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    else:
+        return jsonify({"message": "파일을 찾을 수 없습니다."}), 404
 
 def parse_content(divs):
     """ BeautifulSoup으로 페이지 내용 파싱 """
