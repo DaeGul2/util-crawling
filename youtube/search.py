@@ -74,8 +74,8 @@ def fetch_youtube_video_data(keyword="고양이", max_results=50):
 
     # 📁 엑셀 저장
     df = pd.DataFrame(data, columns=["영상 제목", "업로더", "링크", "조회수", "좋아요 수", "댓글 수", "설명란", "BGM 정보"])
-    df.to_excel("youtube_video_data_임신_샴푸.xlsx", index=False)
+    df.to_excel("youtube_video_data_대구교통공사.xlsx", index=False)
     print("✅ youtube_video_data_임산부.xlsx 파일 저장 완료!")
 
 # 🔥 실행
-fetch_youtube_video_data("임신 샴푸", 100)
+fetch_youtube_video_data("대구교통공사 채용", 100)
