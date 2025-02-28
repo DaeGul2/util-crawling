@@ -204,6 +204,179 @@ def naver_crawl():
     print(f"✅ 크롤링 완료! 데이터 저장됨: `{output_file}`")
 
     return jsonify({"message": "크롤링 완료", "download_url": f"http://localhost:5000/download/{output_file}"})
+@app.route('/start-naver-price', methods=['GET'])
+def start_naver_price_browser():
+    """ 네이버 가격 리뷰 크롤링 브라우저 실행 """
+    global driver
+    if driver is None:
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+
+    driver.get("https://shopping.naver.com/home")  # 네이버 쇼핑 홈으로 이동
+    return jsonify({"message": "브라우저가 실행되었습니다. 원하는 상품 페이지로 이동 후 '크롤링 시작' 버튼을 눌러주세요."})
+
+
+@app.route('/naver-price-crawl', methods=['POST'])
+def naver_price_crawl():
+    """ 네이버 가격 리뷰 크롤링 시작 (사용자가 직접 페이지 이동 후 실행) """
+    global driver
+    if driver is None:
+        return jsonify({"message": "먼저 브라우저를 실행하세요."})
+
+    data = request.json
+    max_pages = int(data.get("max_pages", 10))  # 기본 10페이지
+
+    parsed_data = []
+    current_page = 1
+
+    while current_page <= max_pages:
+        print(f"🔍 {current_page} 페이지 크롤링 중...")
+
+        try:
+            # 광고 제외한 상품 리스트 가져오기
+            product_elements = WebDriverWait(driver, 10).until(
+                EC.presence_of_all_elements_located((By.XPATH, "//div[contains(@class, 'product_item__MDtDF')]"))
+            )
+        except:
+            print("🚫 상품 목록 로딩 실패")
+            break
+
+        for product in product_elements:
+            try:
+                # 광고 제품 필터링
+                is_ad = len(product.find_elements(By.XPATH, ".//svg[contains(@class, 'svg_ad')]")) > 0
+                if is_ad:
+                    continue
+
+                # 상품명
+                product_name = product.find_element(By.XPATH, ".//div[contains(@class, 'product_title')]/a").text
+                
+                # 가격
+                price = product.find_element(By.XPATH, ".//span[contains(@class, 'price_num')]").text.replace(",", "")
+                
+                
+                # ✅ 리뷰 수
+                try:
+                    review_count = driver.find_element(By.XPATH, "//em[@class='product_num__fafe5']").text
+                except:
+                    review_count = "0"  # 리뷰가 없을 경우 기본값
+
+                # 찜 수
+                try:
+                    jjim_count = driver.find_element(By.XPATH, "//span[contains(text(), '찜')]/span[@class='product_num__fafe5']").text
+                except:
+                    jjim_count = "0"
+                # ✅ 용량 (우선 태그에서 찾고, 없으면 제품명에서 정규식으로 추출)
+                try:
+                    capacity_element = driver.find_element(By.XPATH, "//a[contains(@data-shp-contents-type, '용량_M')]")
+                    capacity = capacity_element.text.replace("용량 : ", "").strip()
+                except:
+                    # 제품명에서 정규식으로 용량 추출
+                    import re
+                    match = re.search(r'(\d+(?:\.\d+)?)(ml|g|l|kg)', product_name.lower().replace(" ", ""))
+                    capacity = match.group(0) if match else "정보 없음"
+
+                # 구매 수
+                try:
+                    purchase_count = product.find_element(By.XPATH, ".//span[contains(text(), '구매')]/em").text
+                except:
+                    purchase_count = "0"
+
+                # 등록일
+                try:
+                    reg_date = product.find_element(By.XPATH, ".//span[contains(text(), '등록일')]").text.replace("등록일 ", "")
+                except:
+                    reg_date = "정보 없음"
+
+                # 쇼핑몰명
+                try:
+                    shop_name_element = product.find_element(By.XPATH, ".//a[contains(@class, 'product_mall')]")
+                    shop_name = shop_name_element.text.strip()
+
+                    # ✅ 쇼핑몰 이름이 빈 문자열이면 이미지의 alt 속성에서 가져오기
+                    if not shop_name:
+                        shop_name_img = shop_name_element.find_element(By.TAG_NAME, "img")
+                        shop_name = shop_name_img.get_attribute("alt").strip() if shop_name_img else "정보 없음"
+
+                except:
+                    shop_name = "정보 없음"
+
+
+                # ✅ 종류, 효과, 특징, 포장형태 추출
+                try:
+                    desc_elements = product.find_elements(By.XPATH, ".//div[contains(@class, 'product_desc__m2mVJ')]/div/a")
+                    product_type, effects, features, packaging = "", [], [], []
+
+                    for desc in desc_elements:
+                        desc_text = desc.text
+                        if "종류 :" in desc_text:
+                            product_type = desc_text.replace("종류 :", "").strip()
+                        elif "효과 :" in desc_text or "효과" in desc_text:
+                            effects.append(desc_text.replace("효과 :", "").strip())
+                        elif "특징 :" in desc_text or "특징" in desc_text:
+                            features.append(desc_text.replace("특징 :", "").strip())
+                        elif "포장형태 :" in desc_text or "포장형태" in desc_text:
+                            packaging.append(desc_text.replace("포장형태 :", "").strip())
+
+                    effects_text = ", ".join(effects) if effects else "정보 없음"
+                    features_text = ", ".join(features) if features else "정보 없음"
+                    packaging_text = ", ".join(packaging) if packaging else "정보 없음"
+
+                except:
+                    product_type, effects_text, features_text, packaging_text = "정보 없음", "정보 없음", "정보 없음", "정보 없음"
+
+                # ✅ 카테고리 Depth (최대 4개)
+                try:
+                    category_elements = product.find_elements(By.XPATH, ".//div[contains(@class, 'product_depth__I4SqY')]/span")
+                    categories = [cat.text for cat in category_elements]
+                    depth1 = categories[0] if len(categories) > 0 else "정보 없음"
+                    depth2 = categories[1] if len(categories) > 1 else "정보 없음"
+                    depth3 = categories[2] if len(categories) > 2 else "정보 없음"
+                    depth4 = categories[3] if len(categories) > 3 else "정보 없음"
+                except:
+                    depth1, depth2, depth3, depth4 = "정보 없음", "정보 없음", "정보 없음", "정보 없음"
+
+                # 결과 리스트에 추가
+                parsed_data.append([product_name, price, capacity,review_count, jjim_count, purchase_count, reg_date, shop_name,
+                                    product_type, effects_text, features_text, packaging_text, depth1, depth2, depth3, depth4])
+
+                print(f"✅ {product_name} | {price}원 | 리뷰: {review_count} | 찜: {jjim_count} | 구매: {purchase_count} | {shop_name}")
+                print(f"   카테고리: {depth1} > {depth2} > {depth3} > {depth4}")
+                print(f"   종류: {product_type} | 효과: {effects_text} | 특징: {features_text} | 포장형태: {packaging_text}")
+
+            except Exception as e:
+                print(f"❌ 상품 데이터 추출 오류: {e}")
+
+        # ✅ 페이지네이션 로직
+        if current_page % 10 != 0:
+            try:
+                next_page_button = driver.find_element(By.XPATH, f"//a[text()='{current_page + 1}']")
+                driver.execute_script("arguments[0].click();", next_page_button)
+                time.sleep(3)
+                current_page += 1
+                continue
+            except:
+                print(f"🚫 {current_page+1} 페이지 버튼을 찾을 수 없음.")
+                break
+        else:
+            try:
+                next_button = driver.find_element(By.XPATH, "//a[contains(text(), '다음')]")
+                driver.execute_script("arguments[0].click();", next_button)
+                time.sleep(3)
+                current_page += 1
+            except:
+                print("🚫 '다음' 버튼을 찾을 수 없음. 크롤링 종료.")
+                break
+
+    # ✅ 엑셀 파일 저장
+    output_file = "naver_price.xlsx"
+    columns = ["상품명", "가격","용량" ,"리뷰 수", "찜 수", "구매 수", "등록일", "쇼핑몰명", "종류", "효과", "특징", "포장형태", "Depth1", "Depth2", "Depth3", "Depth4"]
+    output_df = pd.DataFrame(parsed_data, columns=columns)
+    output_df.to_excel(output_file, index=False)
+    print(f"✅ 크롤링 완료! 데이터 저장됨: `{output_file}`")
+
+    return jsonify({"message": "크롤링 완료", "download_url": f"http://localhost:5000/download/{output_file}"})
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
