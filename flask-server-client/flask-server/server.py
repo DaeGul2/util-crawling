@@ -244,10 +244,24 @@ def naver_price_crawl():
         for product in product_elements:
             try:
                 # 광고 제품 필터링
-                is_ad = len(product.find_elements(By.XPATH, ".//svg[contains(@class, 'svg_ad')]")) > 0
+                is_ad = (
+                    len(product.find_elements(By.XPATH, ".//svg[contains(@class, 'svg_ad')]")) > 0
+                    or "superSavingProduct_" in product.get_attribute("class")
+                )
                 if is_ad:
                     continue
+                
+                # 쇼핑몰명 봤을 때, 쿠팡이나 그런 잔바리면 재낌낌
+                try:
+                    shop_name_element = product.find_element(By.XPATH, ".//a[contains(@class, 'product_mall')]")
+                    shop_name = shop_name_element.text.strip()
 
+                    # ✅ 쇼핑몰 이름이 빈 문자열이면 이미지의 alt 속성에서 가져오기
+                    if not shop_name:
+                        continue
+                        
+                except:
+                    shop_name = "정보 없음"
                 # 상품명
                 product_name = product.find_element(By.XPATH, ".//div[contains(@class, 'product_title')]/a").text
                 
@@ -255,16 +269,30 @@ def naver_price_crawl():
                 price = product.find_element(By.XPATH, ".//span[contains(@class, 'price_num')]").text.replace(",", "")
                 
                 
-                # ✅ 리뷰 수
                 try:
-                    review_count = driver.find_element(By.XPATH, "//em[@class='product_num__fafe5']").text
-                except:
-                    review_count = "0"  # 리뷰가 없을 경우 기본값
+                # ✅ 리뷰 수 & 찜 수를 포함하는 전체 텍스트 가져오기
+                    etc_box = product.find_element(By.CLASS_NAME, "product_etc_box__ElfVA").text
 
-                # 찜 수
-                try:
-                    jjim_count = driver.find_element(By.XPATH, "//span[contains(text(), '찜')]/span[@class='product_num__fafe5']").text
+                    # ✅ 리뷰 수 정규식으로 추출 (ex: "(3만)" 또는 "(244)")
+                    review_match = re.search(r"\(([\d,]+(?:\.\d+)?[만]?)\)", etc_box)
+                    if review_match:
+                        review_count = review_match.group(1)
+                        # "3만" 같은 경우 "30000" 으로 변환
+                        if "만" in review_count:
+                            review_count = review_count.replace("만", "")
+                            review_count = str(int(float(review_count) * 10000))
+                    else:
+                        review_count = "0"  # 리뷰 없음
+
+                    # ✅ 찜 수 정규식으로 추출 (ex: "찜 1,463")
+                    jjim_match = re.search(r"찜\s([\d,]+)", etc_box)
+                    if jjim_match:
+                        jjim_count = jjim_match.group(1).replace(",", "")
+                    else:
+                        jjim_count = "0"  # 찜 없음
+
                 except:
+                    review_count = "0"
                     jjim_count = "0"
                 # ✅ 용량 (우선 태그에서 찾고, 없으면 제품명에서 정규식으로 추출)
                 try:
@@ -288,18 +316,17 @@ def naver_price_crawl():
                 except:
                     reg_date = "정보 없음"
 
-                # 쇼핑몰명
+                
                 try:
-                    shop_name_element = product.find_element(By.XPATH, ".//a[contains(@class, 'product_mall')]")
-                    shop_name = shop_name_element.text.strip()
+                    delivery_element = product.find_element(By.CLASS_NAME, "price_delivery__yw_We")
+                    delivery_text = delivery_element.text.strip()
 
-                    # ✅ 쇼핑몰 이름이 빈 문자열이면 이미지의 alt 속성에서 가져오기
-                    if not shop_name:
-                        shop_name_img = shop_name_element.find_element(By.TAG_NAME, "img")
-                        shop_name = shop_name_img.get_attribute("alt").strip() if shop_name_img else "정보 없음"
+                    # 숫자 + 원 또는 "무료" 만 추출
+                    delivery_match = re.search(r"(\d{1,3}(,\d{3})*원|무료)", delivery_text)
+                    delivery_fee = delivery_match.group(1) if delivery_match else "0원"
 
                 except:
-                    shop_name = "정보 없음"
+                    delivery_fee = "0원"  # 기본값 설정
 
 
                 # ✅ 종류, 효과, 특징, 포장형태 추출
@@ -337,7 +364,7 @@ def naver_price_crawl():
                     depth1, depth2, depth3, depth4 = "정보 없음", "정보 없음", "정보 없음", "정보 없음"
 
                 # 결과 리스트에 추가
-                parsed_data.append([product_name, price, capacity,review_count, jjim_count, purchase_count, reg_date, shop_name,
+                parsed_data.append([product_name, price, capacity,review_count,  purchase_count, reg_date,delivery_fee ,shop_name,
                                     product_type, effects_text, features_text, packaging_text, depth1, depth2, depth3, depth4])
 
                 print(f"✅ {product_name} | {price}원 | 리뷰: {review_count} | 찜: {jjim_count} | 구매: {purchase_count} | {shop_name}")
@@ -370,7 +397,7 @@ def naver_price_crawl():
 
     # ✅ 엑셀 파일 저장
     output_file = "naver_price.xlsx"
-    columns = ["상품명", "가격","용량" ,"리뷰 수", "찜 수", "구매 수", "등록일", "쇼핑몰명", "종류", "효과", "특징", "포장형태", "Depth1", "Depth2", "Depth3", "Depth4"]
+    columns = ["상품명", "가격","용량" ,"리뷰 수",  "구매 수", "등록일","배송비", "쇼핑핑몰명", "종류", "효과", "특징", "포장형태", "Depth1", "Depth2", "Depth3", "Depth4"]
     output_df = pd.DataFrame(parsed_data, columns=columns)
     output_df.to_excel(output_file, index=False)
     print(f"✅ 크롤링 완료! 데이터 저장됨: `{output_file}`")
