@@ -87,15 +87,24 @@ def crawl():
         page += 1
 
     # 엑셀로 저장
-    output_file = "interviews.xlsx"
+    output_file = "merged_review.xlsx"
     columns = ["번호", "인터뷰 내용", "면접 질문", "면접 답변", "채용 방식", "발표 시기"]  # 6개로 수정
 
     output_df = pd.DataFrame(parsed_data, columns=columns)
     output_df.to_excel(output_file, index=False)
     print(f"Data saved to {output_file}")
 
+    # '인터뷰 내용'과 '면접 답변' 컬럼을 합쳐 새로운 컬럼 생성
+    data = pd.read_excel(output_file)
+    data['review'] = '응답자의 한줄평 : ' + data['인터뷰 내용'].astype(str) + '\n응답자의 면접느낀점 : ' + data['면접 답변'].astype(str)
+
+    # 결과를 새로운 엑셀 파일로 저장
+    data.to_excel(output_file, index=False)
+    print(f"Updated data saved to {output_file}")
+
     # ✅ 파일 다운로드 URL을 클라이언트에 반환
     return jsonify({"message": "크롤링 완료", "download_url": f"http://localhost:5000/download/{output_file}"})
+
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
