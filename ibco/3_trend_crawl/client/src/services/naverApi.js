@@ -25,3 +25,14 @@ export const fetchProductCount = async (keyword) => {
         return "N/A"; // ✅ 오류 발생 시 "N/A" 반환
     }
 };
+
+// ✅ 검색량 조회 API 추가
+export const fetchSearchVolume = async (keywords) => {
+    try {
+        const response = await axios.post("http://localhost:5000/api/search-volume", { keywords });
+        return response.data;
+    } catch (error) {
+        console.error("🔴 검색량 조회 실패:", error);
+        return [];
+    }
+};
