@@ -76,19 +76,21 @@ def crawl():
         time.sleep(2)
 
         soup = BeautifulSoup(driver.page_source, 'html.parser')
-        content_divs = soup.find_all('div', class_='content_body_ty1')
+        # ✅ `ctbody_col2` 전체를 가져옴 (면접일자 포함)
+        content_blocks = soup.find_all('div', class_='ctbody_col2')
 
-        if len(content_divs) < 1:
+        if len(content_blocks) < 1:
             break
 
-        new_data = parse_content(content_divs)
+        new_data = parse_content(content_blocks)  # ✅ 수정된 부분
         parsed_data.extend(new_data)
         print(f"Page {page} parsed and added to data.")
         page += 1
 
     # 엑셀로 저장
     output_file = "merged_review.xlsx"
-    columns = ["번호", "인터뷰 내용", "면접 질문", "면접 답변", "채용 방식", "발표 시기"]  # 6개로 수정
+    columns = ["번호", "인터뷰 내용", "면접 질문", "면접 답변", "채용 방식", "발표 시기", "면접일자"]
+
 
     output_df = pd.DataFrame(parsed_data, columns=columns)
     output_df.to_excel(output_file, index=False)
@@ -103,7 +105,7 @@ def crawl():
     print(f"Updated data saved to {output_file}")
 
     # ✅ 파일 다운로드 URL을 클라이언트에 반환
-    return jsonify({"message": "크롤링 완료", "download_url": f"http://localhost:5000/download/{output_file}"})
+    return jsonify({"message": "크롤링 완료", "download_url": f"http://localhost:8080/download/{output_file}"})
 
 
 @app.route('/download/<filename>', methods=['GET'])
@@ -126,6 +128,9 @@ def parse_content(divs):
 
         try:
             tc_list = div.find('dl', class_='tc_list')
+             # 면접일자 가져오기 (없으면 제외)
+            interview_date_dt = div.find('dt', text="면접일자")
+            interview_date = interview_date_dt.find_next_sibling('dd').get_text(strip=True) if interview_date_dt else ''
             dd_tags = tc_list.find_all('dd', class_='df1')
             interview_question = dd_tags[0].get_text(separator=" ", strip=True) if len(dd_tags) > 0 else ''
             interview_answer = dd_tags[1].get_text(separator=" ", strip=True) if len(dd_tags) > 1 else ''
@@ -135,7 +140,7 @@ def parse_content(divs):
             interview_question = interview_answer = recruitment_method = announcement_timing = ''
 
         parsed_data.append([idx, interview_text, interview_question, interview_answer,
-                            recruitment_method, announcement_timing])
+                            recruitment_method, announcement_timing,interview_date])
     return parsed_data
 @app.route('/start-naver', methods=['GET'])
 def start_naver_browser():
@@ -214,7 +219,7 @@ def naver_crawl():
     output_df.to_excel(output_file, index=False)
     print(f"✅ 크롤링 완료! 데이터 저장됨: `{output_file}`")
 
-    return jsonify({"message": "크롤링 완료", "download_url": f"http://localhost:5000/download/{output_file}"})
+    return jsonify({"message": "크롤링 완료", "download_url": f"http://localhost:8080/download/{output_file}"})
 @app.route('/start-naver-price', methods=['GET'])
 def start_naver_price_browser():
     """ 네이버 가격 리뷰 크롤링 브라우저 실행 """
@@ -413,8 +418,8 @@ def naver_price_crawl():
     output_df.to_excel(output_file, index=False)
     print(f"✅ 크롤링 완료! 데이터 저장됨: `{output_file}`")
 
-    return jsonify({"message": "크롤링 완료", "download_url": f"http://localhost:5000/download/{output_file}"})
+    return jsonify({"message": "크롤링 완료", "download_url": f"http://localhost:8080/download/{output_file}"})
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=True)

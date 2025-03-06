@@ -10,7 +10,7 @@ const CrawlButton = () => {
     // 1️⃣ 브라우저 실행 (로그인용)
     const openBrowser = async () => {
         try {
-            const response = await axios.get("http://localhost:5000/start");
+            const response = await axios.get("http://localhost:8080/start");
             setMessage(response.data.message);
         } catch (error) {
             console.error("브라우저 실행 오류", error);
@@ -30,7 +30,7 @@ const CrawlButton = () => {
         setDownloadUrl(null);  // 🔹 다운로드 URL 초기화
 
         try {
-            const response = await axios.post("http://localhost:5000/crawl", {
+            const response = await axios.post("http://localhost:8080/crawl", {
                 target_url: url
             });
             setMessage(response.data.message);

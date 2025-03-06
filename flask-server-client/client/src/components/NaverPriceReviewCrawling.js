@@ -10,7 +10,7 @@ const NaverPriceReviewCrawling = () => {
     // 1️⃣ 브라우저 실행 (사용자가 직접 이동)
     const openBrowser = async () => {
         try {
-            const response = await axios.get("http://localhost:5000/start-naver-price");
+            const response = await axios.get("http://localhost:8080/start-naver-price");
             setMessage(response.data.message);
         } catch (error) {
             console.error("브라우저 실행 오류", error);
@@ -30,7 +30,7 @@ const NaverPriceReviewCrawling = () => {
         setDownloadUrl(null);
 
         try {
-            const response = await axios.post("http://localhost:5000/naver-price-crawl", {
+            const response = await axios.post("http://localhost:8080/naver-price-crawl", {
                 max_pages: maxPages
             });
             setMessage(response.data.message);
