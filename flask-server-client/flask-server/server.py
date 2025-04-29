@@ -98,7 +98,7 @@ def crawl():
 
     # '인터뷰 내용'과 '면접 답변' 컬럼을 합쳐 새로운 컬럼 생성
     data = pd.read_excel(output_file)
-    data['review'] = '응답자의 한줄평 : ' + data['인터뷰 내용'].astype(str) + '\n응답자의 면접느낀점 : ' + data['면접 답변'].astype(str)
+    data['review'] = '면접경험 이후 응답자의 한줄평 : ' + data['인터뷰 내용'].astype(str) + '\n응답자의 면접느낀점 : ' + data['면접 답변'].astype(str)
 
     # 결과를 새로운 엑셀 파일로 저장
     data.to_excel(output_file, index=False)
